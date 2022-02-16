@@ -7,6 +7,7 @@ import Data.Array.IO
 import Data.Char ( ord, chr )
 import System.IO ( hFlush, stdout )
 import System.Directory ()
+import Control.Monad ( replicateM )
 
 newtype Byte = Byte { x :: IORef Int }
 
@@ -16,7 +17,7 @@ makeByte = do
   return (Byte iref)
 
 createByteArray :: Int -> IO [Byte]
-createByteArray x = sequence $ take x (repeat makeByte)
+createByteArray x = replicateM x makeByte
 
 incPointer :: Byte -> IO ()
 incPointer (Byte b) = do
@@ -81,7 +82,7 @@ loop byte array xs = do
 runCode :: [Command] -> Byte -> MutableArray -> IO ()
 runCode [] _ _ = return ()
 runCode (x:xs) byte array = do
-  (case x of 
+  (case x of
     IncrementPointer -> incPointer byte
     DecrementPointer -> decPointer byte
     Increment -> incByte byte array
@@ -100,7 +101,7 @@ prompt s = do
   hFlush stdout
   getLine
 
-interpret = do 
+interpret = do
   arr <- newArray (1,30000) 0 :: IO MutableArray
   byte <- makeByte
   repl byte arr
@@ -111,7 +112,7 @@ repl byte arr = do
   case code of
     ":b" -> getCurrentByte byte arr
     "reset" -> interpret
-    _ -> do 
+    _ -> do
       let parsed = generateAst code
       runCode parsed byte arr
       if Output `elem` parsed
