@@ -1,11 +1,12 @@
 module Interpret (interpret) where
 
-import Ast
-import Data.IORef
+import Ast ( Command(..), generateAst )
+import Data.IORef ( IORef, modifyIORef, newIORef, readIORef )
 import Data.Array.IO
-import Data.Char
-import System.IO
-import System.Directory
+    ( readArray, writeArray, MArray(newArray), IOArray )
+import Data.Char ( ord, chr )
+import System.IO ( hFlush, stdout )
+import System.Directory ()
 
 newtype Byte = Byte { x :: IORef Int }
 
