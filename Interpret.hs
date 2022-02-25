@@ -24,17 +24,17 @@ incPointer :: Byte -> IO (Either String ())
 incPointer (Byte b) = do
   byte <- readIORef b
   if byte == 30000 then return $ Left "Over memory limit"
-  else modifyIORef b (+1)
-  -- where
-  --   do
-  --     byte <- readIORef b
-  --     byte
+  else do
+      modifyIORef b (+1)
+      return $ Right ()
 
-decPointer :: Byte -> Either String (IO ())
+decPointer :: Byte -> IO (Either String ())
 decPointer (Byte b) = do
-  byte <- Right $ readIORef b
-  if byte == 1 then Left "Can't move pointer less than 1"
-  else Right $ modifyIORef b (subtract 1)
+  byte <- readIORef b
+  if byte == 1 then return $ Left "Can't move pointer less than 1"
+  else do
+      modifyIORef b (subtract 1)
+      return $ Right ()
 
 readByte :: Byte -> MutableArray -> IO Int
 readByte (Byte b) array = do
@@ -75,43 +75,43 @@ getCurrentByte (Byte b) array = do
 --saveFile (Byte b) array = do
   --get
 
-loop :: Byte -> MutableArray -> [Command] -> Either String (IO ())
-loop _ _ [] = Right $ return ()
-loop byte array xs = Right $ return ()
-  -- runCode xs (byte) array
-  -- case readByte byte array of
-  --   (Right val) ->
-  -- val <- readByte byte array
-  -- case val of
-  --   0 -> Left ""
-  --   _ -> Right $ return ()
-  -- Left ""
-  -- if val == 0
-  --   then Right $ return ()
-  -- else loop byte array xs
-  -- where 
-  --     checkByte :: IO Int -> Either String (IO ())
-  --     checkByte x = do
-  --       val <- x
-  --       if val == 0
-  --         then Right $ return ()
-  --       else loop byte array xs
-          
+loop :: Byte -> MutableArray -> [Command] -> IO (Either String ())
+loop _ _ [] = return $ Right ()
+loop byte array xs = do
+  result <- runCode xs byte array
+  case result of
+    (Left err) -> return $ Left err
+    (Right ()) -> checkByte $ readByte byte array
+  where
+    checkByte :: IO Int -> IO (Either String ())
+    checkByte x = do
+      val <- x
+      if val == 0
+        then return $ Right ()
+      else loop byte array xs
 
-
-runCode :: [Command] -> Byte -> MutableArray -> Either String (IO ())
-runCode [] _ _ = Right $ return ()
+runCode :: [Command] -> Byte -> MutableArray -> IO (Either String ())
+runCode [] _ _ = return $ Right ()
 runCode (x:xs) byte array = do
-  (case x of
+  result <- (case x of
     IncrementPointer -> incPointer byte
     DecrementPointer -> decPointer byte
-    Increment -> Right $ incByte byte array
-    Decrement -> Right $ decByte byte array
-    Output -> Right $ output byte array
-    Input -> Right $ input byte array
+    Increment -> do
+      incByte byte array
+      return $ Right ()
+    Decrement -> do
+      decByte byte array
+      return $ Right ()
+    Output -> do
+      output byte array
+      return $ Right ()
+    Input -> do
+      input byte array
+      return $ Right ()
     Loop expression -> loop byte array expression)
-
-  runCode xs byte array
+  case result of
+    (Left err) -> return $ Left err
+    (Right ()) -> runCode xs byte array
 
 type MutableArray = IOArray Int Int
 
@@ -134,18 +134,12 @@ repl byte arr = do
     "reset" -> interpret
     _ -> do
       let parsed = generateAst code
-      let result = runCode parsed byte arr
+      result <- runCode parsed byte arr
       case result of
-          (Left err) -> do
-              putStrLn err
-              repl byte arr
-          (Right correct) -> correct
+          (Left err) -> putStrLn err
+          _ -> putStr ""
       if Output `elem` parsed
         then putStrLn ""
       else
         putStr ""
   repl byte arr
-
-showError :: Either String (IO ()) -> IO ()
-showError (Left err) = putStrLn err
-showError (Right correct) = correct
