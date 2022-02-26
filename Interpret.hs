@@ -134,12 +134,15 @@ repl byte arr = do
     "reset" -> interpret
     _ -> do
       let parsed = generateAst code
-      result <- runCode parsed byte arr
-      case result of
-          (Left err) -> putStrLn err
-          _ -> putStr ""
-      if Output `elem` parsed
-        then putStrLn ""
-      else
-        putStr ""
+      case parsed of
+        (Left err) -> putStrLn err
+        (Right tokens) -> do
+            result <- runCode tokens byte arr
+            case result of
+                (Left err) -> putStrLn err
+                _ -> putStr ""
+            if Output `elem` tokens
+                then putStrLn ""
+            else
+                putStr ""
   repl byte arr

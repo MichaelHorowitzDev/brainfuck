@@ -2,8 +2,9 @@ module Ast (Command (..), generateAst) where
 
 import Lexer
 import Data.Monoid
+import Data.List (sort)
 
-data Command = 
+data Command =
   Loop [Command]
   | IncrementPointer
   | DecrementPointer
@@ -12,28 +13,18 @@ data Command =
   | Output
   | Input deriving (Show, Eq)
 
-filterChar :: String -> String
-filterChar = filter (\x -> x `elem` "<>+-[].,")
-
 bracketCount :: Char -> Int
 bracketCount '[' = 1
 bracketCount ']' = -1
 bracketCount _ = 0
 
---countBrackets :: String -> Bool
---countBrackets s = filter (\x -> x `elem` "[]")
-countBrackets :: String -> (String, Sum Int)
-countBrackets [] = ("", Sum 0)
-countBrackets (x:xs)
-  | x == '[' = (xs, Sum 1)
-  | x == ']' = (xs, Sum (-1))
-  | otherwise = (xs, Sum 0)
-countBrackets ('[':xs) = (xs, Sum 1)
-countBrackets (']':xs) = (xs, Sum (-1))
-countBrackets xs = (xs, Sum 0)
-
-applyLog :: (Monoid m) => (a,m) -> (a -> (b,m)) -> (b,m)
-applyLog (x,log) f = let (y,newLog) = f x in (y, log <> newLog)
+countBrackets :: String -> Bool
+countBrackets xs = 
+    even (length sorted) 
+    && filtered == sorted
+    where
+        filtered = filter (`elem` "[]") xs
+        sorted = sort filtered
 
 joinFirst :: (Monoid m) => m -> (m,a) -> (m,a)
 joinFirst a (x,y) = (a <> x, y)
@@ -51,5 +42,11 @@ getExpression (x:xs) = case x of
   ',' -> [Input] `joinFirst` getExpression xs
   where (tokens, string) = getExpression xs
 
-generateAst :: String -> [Command]
-generateAst s = fst $ getExpression $ filterChar s
+filterChar :: String -> String
+filterChar = filter (`elem` "[]<>+-.,")
+
+generateAst :: String -> Either String [Command]
+generateAst s
+    | brackets = Right $ fst $ getExpression $ filterChar s
+    | otherwise = Left "Brackets mismatched"
+    where brackets = countBrackets s
