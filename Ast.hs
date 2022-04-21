@@ -13,11 +13,6 @@ data Command =
   | Output
   | Input deriving (Show, Eq)
 
-bracketCount :: Char -> Int
-bracketCount '[' = 1
-bracketCount ']' = -1
-bracketCount _ = 0
-
 countBrackets :: String -> Bool
 countBrackets xs = 
     even (length sorted) 
