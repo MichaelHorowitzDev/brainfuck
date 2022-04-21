@@ -57,13 +57,14 @@ output :: Byte -> MutableArray -> IO ()
 output byte array = do
   val <- readByte byte array
   if val < 0 then putStr ""
-  else putChar $ chr val
+  else putStr $ chr val : "\n"
 
 input :: Byte -> MutableArray -> IO ()
 input (Byte b) array = do
   byte <- readIORef b
   insert <- getChar
   writeArray array byte (ord insert)
+  putChar '\n'
 
 getCurrentByte :: Byte -> MutableArray -> IO ()
 getCurrentByte (Byte b) array = do
@@ -126,23 +127,22 @@ interpret = do
   byte <- makeByte
   repl byte arr
 
+convertAst :: Either String [Command] -> Byte -> MutableArray -> IO (Either String ())
+convertAst (Left err) _ _ = return $ Left err
+convertAst (Right tokens) byte arr = runCode tokens byte arr
+
 repl :: Byte -> MutableArray -> IO ()
 repl byte arr = do
-  code <- prompt "> "
-  case code of
-    ":b" -> getCurrentByte byte arr
-    "reset" -> interpret
-    _ -> do
-      let parsed = generateAst code
-      case parsed of
-        (Left err) -> putStrLn err
-        (Right tokens) -> do
-            result <- runCode tokens byte arr
-            case result of
-                (Left err) -> putStrLn err
-                _ -> putStr ""
-            if Output `elem` tokens
-                then putStrLn ""
-            else
-                putStr ""
-  repl byte arr
+    code <- prompt "> "
+    case code of
+        ":b" -> getCurrentByte byte arr
+        "reset" -> interpret
+        _ -> do
+            let parsed = return $ generateAst code :: IO (Either String [Command])
+            parsed >>= (\parse -> do
+                result <- convertAst parse byte arr
+                case result of
+                    (Left err) -> putStrLn err
+                    (Right ()) -> return ()
+                )
+    repl byte arr
