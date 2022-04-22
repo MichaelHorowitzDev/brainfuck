@@ -13,10 +13,12 @@ data Command =
   | Output
   | Input deriving (Show, Eq)
 
+type Ast = [Command]
+
 joinFirst :: (Monoid m) => m -> (m,a) -> (m,a)
 joinFirst a (x,y) = (a <> x, y)
 
-getExpression :: String -> ([Command], String)
+getExpression :: String -> (Ast, String)
 getExpression "" = ([], "")
 getExpression (x:xs) = case x of
     '[' -> case remaining of
@@ -36,8 +38,22 @@ getExpression (x:xs) = case x of
     _ -> getExpression xs
     where (tokens, remaining) = getExpression xs
 
-generateAst :: String -> Either String [Command]
+-- optimize ast to not create errors such as infinite loops
+astOptimizer :: Ast -> Ast
+astOptimizer [] = []
+astOptimizer (x:xs) =
+    case x of
+        (Loop tokens) ->
+            let children = astOptimizer tokens
+            in if null children 
+                then astOptimizer xs
+                else Loop children : astOptimizer xs
+        _ -> astOptimizer xs
+
+
+generateAst :: String -> Either String Ast
 generateAst s =
     let (tokens, remaining) = getExpression s
     in if remaining /= "" then Left "Mismatched Brackets"
-        else Right tokens
+        else let optimized = astOptimizer tokens
+            in Right optimized
