@@ -26,7 +26,7 @@ commands (x:xs) = (++) (case x of
 
 
 cProgram :: [Command] -> String
-cProgram xs = cMain $ unwords $ map ("\n\t"++) $  programStart : commands xs
+cProgram xs = cMain $ unwords $ map ("\n\t"++) $ programStart : commands xs
 
 compileFromFile :: IO ()
 compileFromFile = do
