@@ -15,14 +15,14 @@ programStart = "char array[30000] = {0}; char *ptr = array;"
 
 commands :: [Command] -> [String]
 commands [] = [""]
-commands (x:xs) = flip (++) (commands xs) (case x of
-  IncrementPointer -> ["++ptr;"]
-  DecrementPointer -> ["--ptr;"]
-  Increment -> ["++*ptr;"]
-  Decrement -> ["--*ptr;"]
-  Output -> ["putchar(*ptr);"]
-  Input -> ["*ptr = getchar();"]
-  Loop expression -> "while (*ptr) {" : (map ("\t"++) $ filter (not . null) $ commands expression) ++ ["}"])
+commands (x:xs) = (++) (case x of
+    IncrementPointer -> ["++ptr;"]
+    DecrementPointer -> ["--ptr;"]
+    Increment -> ["++*ptr;"]
+    Decrement -> ["--*ptr;"]
+    Output -> ["putchar(*ptr);"]
+    Input -> ["*ptr = getchar();"]
+    Loop expression -> "while (*ptr) {" : map ("\t"++) (filter (not . null) $ commands expression) ++ ["}"]) (commands xs)
 
 
 cProgram :: [Command] -> String
@@ -36,10 +36,6 @@ compileFromFile = do
 compile :: String -> IO ()
 compile code = do
   let ast = generateAst code
-  writeFile fileName (cProgram ast)
-
-prompt :: String -> IO String
-prompt text = do
-  putStr text
-  hFlush stdout
-  getLine
+  case ast of
+      (Left err) -> putStrLn err
+      (Right tokens) -> writeFile fileName (cProgram tokens)
