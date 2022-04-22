@@ -48,7 +48,7 @@ astOptimizer (x:xs) =
             in if null children 
                 then astOptimizer xs
                 else Loop children : astOptimizer xs
-        _ -> astOptimizer xs
+        _ -> x : astOptimizer xs
 
 
 generateAst :: String -> Either String Ast
