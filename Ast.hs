@@ -13,35 +13,31 @@ data Command =
   | Output
   | Input deriving (Show, Eq)
 
-countBrackets :: String -> Bool
-countBrackets xs = 
-    even (length sorted) 
-    && filtered == sorted
-    where
-        filtered = filter (`elem` "[]") xs
-        sorted = sort filtered
-
 joinFirst :: (Monoid m) => m -> (m,a) -> (m,a)
 joinFirst a (x,y) = (a <> x, y)
 
 getExpression :: String -> ([Command], String)
-getExpression [] = ([], "")
+getExpression "" = ([], "")
 getExpression (x:xs) = case x of
-  '[' -> [Loop tokens] `joinFirst` getExpression string
-  ']' -> ([], xs)
-  '+' -> [Increment] `joinFirst` getExpression xs
-  '-' -> [Decrement] `joinFirst` getExpression xs
-  '>' -> [IncrementPointer] `joinFirst` getExpression xs
-  '<' -> [DecrementPointer] `joinFirst` getExpression xs
-  '.' -> [Output] `joinFirst` getExpression xs
-  ',' -> [Input] `joinFirst` getExpression xs
-  where (tokens, string) = getExpression xs
-
-filterChar :: String -> String
-filterChar = filter (`elem` "[]<>+-.,")
+    '[' -> case remaining of
+            "" -> ([], x:xs)
+            (a:as) ->
+                if a /= ']'
+                    then ([], x:xs)
+                else let (remainingTokens, string) = getExpression as
+                    in (Loop tokens : remainingTokens, string)
+    ']' -> ([], x:xs)
+    '+' -> (Increment : tokens, remaining)
+    '-' -> (Decrement : tokens, remaining)
+    '>' -> (IncrementPointer : tokens, remaining)
+    '<' -> (DecrementPointer : tokens, remaining)
+    '.' -> (Output : tokens, remaining)
+    ',' -> (Input : tokens, remaining)
+    _ -> getExpression xs
+    where (tokens, remaining) = getExpression xs
 
 generateAst :: String -> Either String [Command]
-generateAst s
-    | brackets = Right $ fst $ getExpression $ filterChar s
-    | otherwise = Left "Brackets mismatched"
-    where brackets = countBrackets s
+generateAst s =
+    let (tokens, remaining) = getExpression s
+    in if remaining /= "" then Left "Mismatched Brackets"
+        else Right tokens
