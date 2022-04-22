@@ -9,6 +9,7 @@ import System.IO ( hFlush, stdout )
 import System.Directory ()
 import Control.Monad ( replicateM )
 import Control.Monad.Trans.Except
+import Data.List ( find )
 
 newtype Byte = Byte { x :: IORef Int }
 
@@ -41,30 +42,37 @@ readByte (Byte b) array = do
   byte <- readIORef b
   readArray array byte
 
-incByte :: Byte -> MutableArray -> IO ()
+incByte :: Byte -> MutableArray -> IO (Either String ())
 incByte (Byte b) array = do
   byte <- readIORef b
   val <- readArray array byte
-  writeArray array byte (val + 1)
+  if val == 65535 then return $ Left "Value cannot be greater than 65535"
+  else do
+      writeArray array byte (val + 1)
+      return $ Right ()
 
-decByte :: Byte -> MutableArray -> IO ()
+decByte :: Byte -> MutableArray -> IO (Either String ())
 decByte (Byte b) array = do
   byte <- readIORef b
   val <- readArray array byte
-  writeArray array byte (val - 1)
+  if val == 0 then return $ Left "Value cannot be less than 0"
+  else do
+      writeArray array byte (val - 1)
+      return $ Right ()
 
-output :: Byte -> MutableArray -> IO ()
+output :: Byte -> MutableArray -> IO (Either String ())
 output byte array = do
   val <- readByte byte array
-  if val < 0 then putStr ""
-  else putStr $ chr val : "\n"
+  if val < 0 then return $ Left "Byte is less than 0"
+  else do
+      putChar $ chr val
+      return $ Right ()
 
 input :: Byte -> MutableArray -> IO ()
 input (Byte b) array = do
   byte <- readIORef b
   insert <- getChar
   writeArray array byte (ord insert)
-  putChar '\n'
 
 getCurrentByte :: Byte -> MutableArray -> IO ()
 getCurrentByte (Byte b) array = do
@@ -97,15 +105,9 @@ runCode (x:xs) byte array = do
   result <- (case x of
     IncrementPointer -> incPointer byte
     DecrementPointer -> decPointer byte
-    Increment -> do
-      incByte byte array
-      return $ Right ()
-    Decrement -> do
-      decByte byte array
-      return $ Right ()
-    Output -> do
-      output byte array
-      return $ Right ()
+    Increment -> incByte byte array
+    Decrement -> decByte byte array
+    Output -> output byte array
     Input -> do
       input byte array
       return $ Right ()
@@ -122,14 +124,11 @@ prompt s = do
   hFlush stdout
   getLine
 
+interpret :: IO ()
 interpret = do
   arr <- newArray (1,30000) 0 :: IO MutableArray
   byte <- makeByte
   repl byte arr
-
-convertAst :: Either String [Command] -> Byte -> MutableArray -> IO (Either String ())
-convertAst (Left err) _ _ = return $ Left err
-convertAst (Right tokens) byte arr = runCode tokens byte arr
 
 repl :: Byte -> MutableArray -> IO ()
 repl byte arr = do
@@ -138,11 +137,12 @@ repl byte arr = do
         ":b" -> getCurrentByte byte arr
         "reset" -> interpret
         _ -> do
-            let parsed = return $ generateAst code :: IO (Either String [Command])
-            parsed >>= (\parse -> do
-                result <- convertAst parse byte arr
-                case result of
-                    (Left err) -> putStrLn err
-                    (Right ()) -> return ()
-                )
+            let parsed = generateAst code
+            case parsed of
+                (Left err) -> putStrLn err
+                (Right tokens) -> do
+                    runCode tokens byte arr
+                    case find (\x -> x `elem` [Output, Input]) tokens of
+                        Nothing -> putStr ""
+                        Just _ -> putChar '\n'
     repl byte arr
