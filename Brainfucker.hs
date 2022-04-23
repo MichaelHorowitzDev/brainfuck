@@ -11,16 +11,15 @@ main = do
     putStrLn "3 - REPL"
     putStrLn "4 - REPL from File"
     putStrLn "Action: "
-    action <- getChar
-    putChar '\n'
+    action <- getLine
     case action of
-        '1' -> compileFromFile
-        '2' -> do
+        "1" -> compileFromFile
+        "2" -> do
             putStrLn "Enter Code:"
             code <- getLine
             compile code
-        '3' -> interpret
-        '4' -> loadFromFile
+        "3" -> interpret
+        "4" -> loadFromFile
         _ -> do
         putStrLn "Incorrect command"
         main
