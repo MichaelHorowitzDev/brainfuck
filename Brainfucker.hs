@@ -1,6 +1,7 @@
 import Compile
 import Interpret
 import System.IO
+import System.Process
 
 main :: IO ()
 main = do
@@ -17,7 +18,7 @@ main = do
             putStrLn "Enter Code:"
             code <- getLine
             compile code
-        "3" -> interpret
+        "3" -> system "clear" >> interpret
         _ -> do
         putStrLn "Incorrect command"
         main
