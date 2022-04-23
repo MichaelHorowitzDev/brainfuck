@@ -1,4 +1,4 @@
-module Interpret (interpret, loadFromFile) where
+module Interpret (interpret) where
 
 import Ast ( Command(..), generateAst )
 import Data.IORef ( IORef, modifyIORef, newIORef, readIORef )
