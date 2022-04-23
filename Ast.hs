@@ -55,5 +55,4 @@ generateAst :: String -> Either String Ast
 generateAst s =
     let (tokens, remaining) = getExpression s
     in if remaining /= "" then Left "Mismatched Brackets"
-        else let optimized = astOptimizer tokens
-            in Right optimized
+        else let optimized = astOptimizer tokens in Right optimized
