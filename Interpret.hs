@@ -141,7 +141,10 @@ repl byte arr = do
             case parsed of
                 (Left err) -> putStrLn err
                 (Right tokens) -> do
-                    runCode tokens byte arr
+                    result <- runCode tokens byte arr
+                    case result of
+                        (Left err) -> putStrLn err
+                        (Right ()) -> return ()
                     case find (\x -> x `elem` [Output, Input]) tokens of
                         Nothing -> putStr ""
                         Just _ -> putChar '\n'
