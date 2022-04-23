@@ -3,6 +3,7 @@ import Ast
 import System.IO
 import System.Directory
 import Data.List
+import Control.Exception
 
 fileName :: String
 fileName = "brainfuck.c"
@@ -28,9 +29,25 @@ commands (x:xs) = (++) (case x of
 cProgram :: [Command] -> String
 cProgram xs = cMain $ unwords $ map ("\n\t"++) $ programStart : commands xs
 
+prompt :: String -> IO String
+prompt s = do
+    putStr s
+    hFlush stdout
+    getLine
+
+loadFile :: IO String
+loadFile = do
+    fileName <- prompt "File Name: "
+    result <- try $ readFile fileName :: IO (Either SomeException String)
+    case result of
+        Left ex -> do
+            putStrLn $ "Error: " ++ show ex
+            loadFile
+        Right val -> return val
+
 compileFromFile :: IO ()
 compileFromFile = do
-  code <- readFile "brainfuck.txt"
+  code <- loadFile
   compile code
 
 compile :: String -> IO ()
