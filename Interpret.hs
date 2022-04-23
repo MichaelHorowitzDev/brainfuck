@@ -1,4 +1,4 @@
-module Interpret (interpret) where
+module Interpret (interpret, loadFromFile) where
 
 import Ast ( Command(..), generateAst )
 import Data.IORef ( IORef, modifyIORef, newIORef, readIORef )
@@ -170,6 +170,34 @@ saveCSV arr = do
     let csvData = heading : map (\(index, byte) -> show index ++ "," ++ show byte ++ "," ++ [chr byte]) associated
     let fileName = "brainfuck.csv"
     writeFile fileName $ intercalate "\n" csvData
+
+loadFromFile :: IO ()
+loadFromFile = do
+    hSetBuffering stdout NoBuffering
+    putStrLn "What format would you like to load from?"
+    putStrLn "1 - CSV"
+    -- putStrLn "2 -> JSON"
+    action <- getChar
+    putChar '\n'
+    case action of
+        '1' -> loadCSV
+        -- '2' -> loadJSON
+        _ -> loadFromFile
+
+loadCSV :: IO ()
+loadCSV = do
+    fileName <- prompt "File name: "
+    contents <- readFile fileName
+    let codeLines = lines contents
+    let heading = head codeLines
+    let dataLines = tail codeLines
+    let dataPairs = map (\line -> case wordsWhen (==',') line of
+            [_, byte] -> read byte
+            [_, byte, _] -> read byte
+            _ -> 0) dataLines :: [Int]
+    arr <- newListArray (1, length dataPairs) dataPairs :: IO MutableArray
+    byte <- makeByte
+    repl byte arr
 
 wordsWhen :: (Char -> Bool) -> String -> [String]
 wordsWhen f s =
