@@ -9,7 +9,6 @@ main = do
     putStrLn "1 - Compile From File"
     putStrLn "2 - Compile From Read"
     putStrLn "3 - REPL"
-    putStrLn "4 - REPL from File"
     putStrLn "Action: "
     action <- getLine
     case action of
@@ -19,7 +18,7 @@ main = do
             code <- getLine
             compile code
         "3" -> interpret
-        "4" -> loadFromFile
         _ -> do
         putStrLn "Incorrect command"
         main
+    main
