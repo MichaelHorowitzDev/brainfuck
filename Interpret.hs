@@ -183,10 +183,9 @@ save arr = do
     putStrLn "What format would you like to save in?"
     putStrLn "1 - CSV"
     -- putStrLn "2 - JSON"
-    action <- getChar
-    putChar '\n'
+    action <- getLine
     case action of
-        '1' -> saveCSV arr
+        "1" -> saveCSV arr
         -- '2' -> saveJSON arr
         _ -> save arr
 
