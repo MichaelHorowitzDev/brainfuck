@@ -3,13 +3,12 @@ module Interpret (interpret) where
 import Ast ( Command(..), generateAst )
 import Data.IORef ( IORef, modifyIORef, newIORef, readIORef )
 import Data.Array.IO
-    ( readArray, writeArray, MArray(newArray), IOArray )
 import Data.Char ( ord, chr )
-import System.IO ( hFlush, stdout )
+import System.IO
 import System.Directory ()
 import Control.Monad ( replicateM )
 import Control.Monad.Trans.Except
-import Data.List ( find )
+import Data.List
 
 newtype Byte = Byte { x :: IORef Int }
 
@@ -136,6 +135,7 @@ repl byte arr = do
     case code of
         ":b" -> getCurrentByte byte arr
         "reset" -> interpret
+        "save" -> save arr
         _ -> do
             let parsed = generateAst code
             case parsed of
@@ -149,3 +149,53 @@ repl byte arr = do
                         Nothing -> putStr ""
                         Just _ -> putChar '\n'
     repl byte arr
+
+save :: MutableArray -> IO ()
+save arr = do
+    hSetBuffering stdout NoBuffering
+    putStrLn "What format would you like to save in?"
+    putStrLn "1 - CSV"
+    -- putStrLn "2 - JSON"
+    action <- getChar
+    putChar '\n'
+    case action of
+        '1' -> saveCSV arr
+        -- '2' -> saveJSON arr
+        _ -> save arr
+
+saveCSV :: MutableArray -> IO ()
+saveCSV arr = do
+    associated <- getAssocs arr
+    let heading = "Index,Byte,Value"
+    let csvData = heading : map (\(index, byte) -> show index ++ "," ++ show byte ++ "," ++ [chr byte]) associated
+    let fileName = "brainfuck.csv"
+    writeFile fileName $ intercalate "\n" csvData
+
+wordsWhen :: (Char -> Bool) -> String -> [String]
+wordsWhen f s =
+    case dropWhile f s of
+        "" -> []
+        s' -> w : wordsWhen f s''
+            where (w, s'') = break f s'
+
+-- indentString :: String -> String
+-- indentString s =
+--     let split = wordsWhen (== '\n') s
+--     in intercalate "\n" $ map ("\t" ++) split
+
+-- generateJSON :: [(Int, Int)] -> String
+-- generateJSON arr =
+--     let cellData = map (\(i, b) -> intercalate ",\n" [index i, byte b, value b]) arr
+--         cells = intercalate ",\n" $ map (\x -> "{\n" ++ indentString x ++ "\n}") cellData
+--     in cells
+--     where
+--         index i = "\"index\": " ++ show i
+--         byte b = "\"byte\": " ++ show b
+--         value b = "\"value\": " ++ "\"" ++ [chr b] ++ "\""
+
+-- saveJSON :: MutableArray -> IO ()
+-- saveJSON arr = do
+--     associated <- getAssocs arr
+--     let cellData = "[\n" ++ indentString (generateJSON associated) ++ "\n]"
+--     let fileName = "brainfuck.json"
+--     writeFile fileName cellData
