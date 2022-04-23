@@ -9,6 +9,7 @@ import System.Directory ()
 import Control.Monad ( replicateM )
 import Control.Monad.Trans.Except
 import Data.List
+import Control.Exception
 
 newtype Byte = Byte { x :: IORef Int }
 
@@ -184,10 +185,19 @@ loadFromFile = do
         -- '2' -> loadJSON
         _ -> loadFromFile
 
+loadFile :: IO String
+loadFile = do
+    fileName <- prompt "File Name: "
+    result <- try $ readFile fileName :: IO (Either SomeException String)
+    case result of
+        Left ex -> do
+            putStrLn $ "Error: " ++ show ex
+            loadFile
+        Right val -> return val
+
 loadCSV :: IO ()
 loadCSV = do
-    fileName <- prompt "File name: "
-    contents <- readFile fileName
+    contents <- loadFile
     let codeLines = lines contents
     let heading = head codeLines
     let dataLines = tail codeLines
