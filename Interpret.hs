@@ -178,10 +178,9 @@ loadFromFile = do
     putStrLn "What format would you like to load from?"
     putStrLn "1 - CSV"
     -- putStrLn "2 -> JSON"
-    action <- getChar
-    putChar '\n'
+    action <- getLine
     case action of
-        '1' -> loadCSV
+        "1" -> loadCSV
         -- '2' -> loadJSON
         _ -> loadFromFile
 
