@@ -124,6 +124,9 @@ prompt s = do
   hFlush stdout
   getLine
 
+main :: IO ()
+main = interpret
+
 interpret :: IO ()
 interpret = do
   arr <- newArray (1,30000) 0 :: IO MutableArray
