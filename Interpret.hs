@@ -128,15 +128,41 @@ interpret :: IO ()
 interpret = do
   arr <- newArray (1,30000) 0 :: IO MutableArray
   byte <- makeByte
+  replIntro
   repl byte arr
+
+replIntro :: IO ()
+replIntro = do
+    putStrLn "Welcome to the Brainfuck REPL!"
+    putStrLn "Type 'help' for a list of commands."
+
+replHelp :: IO ()
+replHelp = do
+    putStrLn "+ - Increment the value at the current pointer"
+    putStrLn "- - Decrement the value at the current pointer"
+    putStrLn "> - Move the pointer to the right"
+    putStrLn "< - Move the pointer to the left"
+    putStrLn ". - Output the value at the current pointer"
+    putStrLn ", - Input a value into the current pointer"
+    putStrLn "[ - Loop until the value at the current pointer is 0"
+    putStrLn "] - Loop until the value at the current pointer is not 0"
+    putStrLn "q - Quit"
+    putStrLn ":b - Get the current byte"
+    putStrLn "reset - Reset memory"
+    putStrLn "save - Save memory to a file"
+    putStrLn "load - Load a file into memory"
+    putStrLn "help - Display this help message"
 
 repl :: Byte -> MutableArray -> IO ()
 repl byte arr = do
     code <- prompt "> "
     case code of
-        ":b" -> getCurrentByte byte arr
-        "reset" -> interpret
-        "save" -> save arr
+        ":b" -> getCurrentByte byte arr >> repl byte arr
+        "reset" -> putStrLn "Reset Memory" >> interpret
+        "save" -> save arr >> repl byte arr
+        "load" -> loadFromFile
+        "help" -> replHelp >> repl byte arr
+        "q" -> return ()
         _ -> do
             let parsed = generateAst code
             case parsed of
@@ -149,7 +175,7 @@ repl byte arr = do
                     case find (\x -> x `elem` [Output, Input]) tokens of
                         Nothing -> putStr ""
                         Just _ -> putChar '\n'
-    repl byte arr
+            repl byte arr
 
 save :: MutableArray -> IO ()
 save arr = do
