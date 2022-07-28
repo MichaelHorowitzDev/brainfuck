@@ -1,6 +1,5 @@
 module Ast (Command (..), generateAst) where
 
-import Lexer
 import Data.Monoid
 import Data.List (sort)
 
