@@ -31,8 +31,14 @@ parseExpression xs@('[':xs') = case expr of
 parseExpression xs@(']':_) = ([], xs)
 parseExpression (x:xs) = first (parseChar x :) $ parseExpression xs
 
+generateError :: String -> String
+generateError s@('[':_) = "no matching close bracket for open bracket\n" ++ s
+generateError s@(']':_) = "close bracket with no open bracket\n" ++ s
+generateError s = "unknown error\n" ++ s
+
 generateAst :: String -> Either String Ast
 generateAst s =
-    let (tokens, remaining) = parseExpression s
-    in if remaining /= "" then Left "Mismatched Brackets"
-        else Right tokens
+    if (not . null) remaining 
+        then Left $ "\ESC[31m\ESC[1m" ++ "error: " ++ "\ESC[0m" ++ generateError remaining 
+    else Right tokens
+    where (tokens, remaining) = parseExpression $ filter (`elem` "[]+-<>,.") s
