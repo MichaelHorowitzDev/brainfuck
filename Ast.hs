@@ -2,6 +2,7 @@ module Ast (Command (..), generateAst) where
 
 import Data.Monoid
 import Data.List (sort)
+import Data.Bifunctor (first)
 
 data Command =
   Loop [Command]
@@ -17,25 +18,23 @@ type Ast = [Command]
 joinFirst :: (Monoid m) => m -> (m,a) -> (m,a)
 joinFirst a (x,y) = (a <> x, y)
 
-getExpression :: String -> (Ast, String)
-getExpression "" = ([], "")
-getExpression (x:xs) = case x of
-    '[' -> case remaining of
-            "" -> ([], x:xs)
-            (a:as) ->
-                if a /= ']'
-                    then ([], x:xs)
-                else let (remainingTokens, string) = getExpression as
-                    in (Loop tokens : remainingTokens, string)
-    ']' -> ([], x:xs)
-    '+' -> (Increment : tokens, remaining)
-    '-' -> (Decrement : tokens, remaining)
-    '>' -> (IncrementPointer : tokens, remaining)
-    '<' -> (DecrementPointer : tokens, remaining)
-    '.' -> (Output : tokens, remaining)
-    ',' -> (Input : tokens, remaining)
-    _ -> getExpression xs
-    where (tokens, remaining) = getExpression xs
+parseChar :: Char -> Command
+parseChar c = case c of
+    '+' -> Increment
+    '-' -> Decrement
+    '>' -> IncrementPointer
+    '<' -> DecrementPointer
+    '.' -> Output
+    ',' -> Input
+
+parseExpression :: String -> (Ast, String)
+parseExpression [] = ([], [])
+parseExpression xs@('[':xs') = case expr of
+    (ast, ']':ys) -> first (Loop ast :) $ parseExpression ys
+    _ -> ([], xs)
+    where expr = parseExpression xs'
+parseExpression xs@(']':_) = ([], xs)
+parseExpression (x:xs) = first (parseChar x :) $ parseExpression xs
 
 -- optimize ast to not create errors such as infinite loops
 astOptimizer :: Ast -> Ast
@@ -52,6 +51,6 @@ astOptimizer (x:xs) =
 
 generateAst :: String -> Either String Ast
 generateAst s =
-    let (tokens, remaining) = getExpression s
+    let (tokens, remaining) = parseExpression s
     in if remaining /= "" then Left "Mismatched Brackets"
         else let optimized = astOptimizer tokens in Right optimized
