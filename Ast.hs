@@ -1,7 +1,5 @@
 module Ast (Command (..), generateAst) where
 
-import Data.Monoid
-import Data.List (sort)
 import Data.Bifunctor (first)
 
 data Command =
