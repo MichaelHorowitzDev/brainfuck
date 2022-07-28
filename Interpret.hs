@@ -87,7 +87,6 @@ getCurrentByte (Byte b) array = do
   --get
 
 loop :: Byte -> MutableArray -> [Command] -> IO (Either String ())
-loop _ _ [] = return $ Right ()
 loop byte array xs = do
   result <- runCode xs byte array
   case result of
