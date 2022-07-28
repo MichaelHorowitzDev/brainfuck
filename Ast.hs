@@ -32,13 +32,14 @@ parseExpression xs@(']':_) = ([], xs)
 parseExpression (x:xs) = first (parseChar x :) $ parseExpression xs
 
 generateError :: String -> String
-generateError s@('[':_) = "no matching close bracket for open bracket\n" ++ s
-generateError s@(']':_) = "close bracket with no open bracket\n" ++ s
-generateError s = "unknown error\n" ++ s
+generateError s = "\ESC[31m\ESC[1m" ++ "error: " ++ "\ESC[0m" ++ generateError s
+    where
+        generateError ('[':_) = "no matching close bracket for open bracket\n" ++ s
+        generateError (']':_) = "close bracket with no open bracket\n" ++ s
+        generateError s = "unknown error\n" ++ s
 
 generateAst :: String -> Either String Ast
-generateAst s =
-    if (not . null) remaining 
-        then Left $ "\ESC[31m\ESC[1m" ++ "error: " ++ "\ESC[0m" ++ generateError remaining 
-    else Right tokens
+generateAst s
+    | (not . null) remaining = Left $ generateError remaining
+    | otherwise = Right tokens
     where (tokens, remaining) = parseExpression $ filter (`elem` "[]+-<>,.") s
