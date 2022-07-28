@@ -20,6 +20,6 @@ main = do
             compile code
         "3" -> system "clear" >> interpret
         _ -> do
-        putStrLn "Incorrect command"
-        main
+            putStrLn "Incorrect command"
+            main
     main
