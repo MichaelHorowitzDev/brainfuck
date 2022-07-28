@@ -19,7 +19,5 @@ main = do
             code <- getLine
             compile code
         "3" -> system "clear" >> interpret
-        _ -> do
-            putStrLn "Incorrect command"
-            main
+        _ -> putStrLn "Incorrect command" >> main
     main
