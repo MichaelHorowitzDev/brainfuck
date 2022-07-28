@@ -36,21 +36,8 @@ parseExpression xs@('[':xs') = case expr of
 parseExpression xs@(']':_) = ([], xs)
 parseExpression (x:xs) = first (parseChar x :) $ parseExpression xs
 
--- optimize ast to not create errors such as infinite loops
-astOptimizer :: Ast -> Ast
-astOptimizer [] = []
-astOptimizer (x:xs) =
-    case x of
-        (Loop tokens) ->
-            let children = astOptimizer tokens
-            in if null children 
-                then astOptimizer xs
-                else Loop children : astOptimizer xs
-        _ -> x : astOptimizer xs
-
-
 generateAst :: String -> Either String Ast
 generateAst s =
     let (tokens, remaining) = parseExpression s
     in if remaining /= "" then Left "Mismatched Brackets"
-        else let optimized = astOptimizer tokens in Right optimized
+        else Right tokens
