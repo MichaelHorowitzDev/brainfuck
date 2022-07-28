@@ -13,9 +13,6 @@ data Command =
 
 type Ast = [Command]
 
-joinFirst :: (Monoid m) => m -> (m,a) -> (m,a)
-joinFirst a (x,y) = (a <> x, y)
-
 parseChar :: Char -> Command
 parseChar c = case c of
     '+' -> Increment
