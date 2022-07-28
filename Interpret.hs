@@ -1,15 +1,14 @@
-module Interpret (interpret) where
+module Interpret where
 
 import Ast ( Command(..), generateAst )
 import Data.IORef ( IORef, modifyIORef, newIORef, readIORef )
 import Data.Array.IO
-import Data.Char ( ord, chr )
 import System.IO
-import System.Directory ()
+import Data.Char ( ord, chr )
 import Control.Monad ( replicateM )
-import Control.Monad.Trans.Except
+import Control.Exception ( SomeException, try )
+import System.Environment   
 import Data.List
-import Control.Exception
 
 newtype Byte = Byte { x :: IORef Int }
 
@@ -17,6 +16,9 @@ makeByte :: IO Byte
 makeByte = do
   iref <- newIORef 1
   return (Byte iref)
+
+makeArray :: IO MutableArray
+makeArray = newArray (1,30000) 0
 
 createByteArray :: Int -> IO [Byte]
 createByteArray x = replicateM x makeByte
@@ -118,123 +120,44 @@ runCode (x:xs) byte array = do
 
 type MutableArray = IOArray Int Int
 
-prompt :: String -> IO String
-prompt s = do
-  putStr s
-  hFlush stdout
-  getLine
+loadFile :: String -> IO (Either SomeException String)
+loadFile fileName = try $ readFile fileName :: IO (Either SomeException String)
 
 main :: IO ()
-main = interpret
+main = do
+    args <- getArgs
+    if null args
+        then putStrLn "No File"
+    else do
+        fileData <- loadFile $ head args
+        case fileData of
+            Left err -> putStrLn $ "Error: " ++ show err
+            Right val -> interpret val
 
-interpret :: IO ()
-interpret = do
-  arr <- newArray (1,30000) 0 :: IO MutableArray
-  byte <- makeByte
-  replIntro
-  repl byte arr
+prompt :: String -> IO String
+prompt s = do
+    putStr s
+    hFlush stdout
+    getLine
 
-replIntro :: IO ()
-replIntro = do
-    putStrLn "Welcome to the Brainfuck REPL!"
-    putStrLn "Type 'help' for a list of commands."
-
-replHelp :: IO ()
-replHelp = do
-    putStrLn "+ - Increment the value at the current pointer"
-    putStrLn "- - Decrement the value at the current pointer"
-    putStrLn "> - Move the pointer to the right"
-    putStrLn "< - Move the pointer to the left"
-    putStrLn ". - Output the value at the current pointer"
-    putStrLn ", - Input a value into the current pointer"
-    putStrLn "[ - Loop until the value at the current pointer is 0"
-    putStrLn "] - Loop until the value at the current pointer is not 0"
-    putStrLn "q - Quit"
-    putStrLn ":b - Get the current byte"
-    putStrLn "reset - Reset memory"
-    putStrLn "save - Save memory to a file"
-    putStrLn "load - Load a file into memory"
-    putStrLn "help - Display this help message"
-
-repl :: Byte -> MutableArray -> IO ()
-repl byte arr = do
-    code <- prompt "> "
-    case code of
-        ":b" -> getCurrentByte byte arr >> repl byte arr
-        "reset" -> putStrLn "Reset Memory" >> interpret
-        "save" -> save arr >> repl byte arr
-        "load" -> loadFromFile
-        "help" -> replHelp >> repl byte arr
-        "q" -> return ()
-        _ -> do
-            let parsed = generateAst code
-            case parsed of
-                (Left err) -> putStrLn err
-                (Right tokens) -> do
-                    result <- runCode tokens byte arr
-                    case result of
-                        (Left err) -> putStrLn err
-                        (Right ()) -> return ()
-                    case find (\x -> x `elem` [Output, Input]) tokens of
-                        Nothing -> putStr ""
-                        Just _ -> putChar '\n'
-            repl byte arr
-
-save :: MutableArray -> IO ()
-save arr = do
-    hSetBuffering stdout NoBuffering
-    putStrLn "What format would you like to save in?"
-    putStrLn "1 - CSV"
-    -- putStrLn "2 - JSON"
-    action <- getLine
-    case action of
-        "1" -> saveCSV arr
-        -- '2' -> saveJSON arr
-        _ -> save arr
-
-saveCSV :: MutableArray -> IO ()
-saveCSV arr = do
-    associated <- getAssocs arr
-    let heading = "Index,Byte,Value"
-    let csvData = heading : map (\(index, byte) -> show index ++ "," ++ show byte ++ "," ++ [chr byte]) associated
-    let fileName = "brainfuck.csv"
-    writeFile fileName $ intercalate "\n" csvData
-
-loadFromFile :: IO ()
-loadFromFile = do
-    hSetBuffering stdout NoBuffering
-    putStrLn "What format would you like to load from?"
-    putStrLn "1 - CSV"
-    -- putStrLn "2 -> JSON"
-    action <- getLine
-    case action of
-        "1" -> loadCSV
-        -- '2' -> loadJSON
-        _ -> loadFromFile
-
-loadFile :: IO String
-loadFile = do
+interpretFromFile :: IO ()
+interpretFromFile = do
     fileName <- prompt "File Name: "
-    result <- try $ readFile fileName :: IO (Either SomeException String)
-    case result of
-        Left ex -> do
-            putStrLn $ "Error: " ++ show ex
-            loadFile
-        Right val -> return val
+    fileData <- loadFile fileName
+    case fileData of
+        Left err -> putStrLn $ "Error: " ++ show err
+        Right val -> interpret val
 
-loadCSV :: IO ()
-loadCSV = do
-    contents <- loadFile
-    let codeLines = lines contents
-    let heading = head codeLines
-    let dataLines = tail codeLines
-    let dataPairs = map (\line -> case wordsWhen (==',') line of
-            [_, byte] -> read byte
-            [_, byte, _] -> read byte
-            _ -> 0) dataLines :: [Int]
-    arr <- newListArray (1, length dataPairs) dataPairs :: IO MutableArray
-    byte <- makeByte
-    repl byte arr
+interpret :: String -> IO ()
+interpret s = case generateAst s of
+    (Left err) -> putStrLn err
+    (Right ast) -> do
+        arr <- makeArray
+        byte <- makeByte
+        result <- runCode ast byte arr
+        case result of
+            (Left err) -> putStrLn err
+            _ -> return ()
 
 wordsWhen :: (Char -> Bool) -> String -> [String]
 wordsWhen f s =
