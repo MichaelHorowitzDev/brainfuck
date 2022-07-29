@@ -8,6 +8,9 @@ import Data.Char ( ord, chr )
 import Ast ( Command(..), generateAst )
 import Data.List ( find, intercalate )
 import Control.Exception ( SomeException, try )
+import Control.Monad (when)
+import Control.Monad.Trans.Except
+import Data.Either
 
 repl :: IO ()
 repl = do
@@ -27,17 +30,13 @@ runRepl byte arr = do
         "help" -> replHelp >> runRepl byte arr
         "q" -> return ()
         _ -> do
-            let parsed = generateAst code
-            case parsed of
+            let parsed = ExceptT $ return (generateAst code)
+            result <- runExceptT $ parsed >>= (\tokens -> ExceptT $ runCode tokens byte arr)
+            case result of
                 (Left err) -> putStrLn err
-                (Right tokens) -> do
-                    result <- runCode tokens byte arr
-                    case result of
-                        (Left err) -> putStrLn err
-                        (Right ()) -> return ()
-                    case find (\x -> x `elem` [Output, Input]) tokens of
-                        Nothing -> putStr ""
-                        Just _ -> putChar '\n'
+                _ -> do
+                    tokens <- runExceptT parsed
+                    when (any (`elem` [Input, Output]) (fromRight [] tokens)) $ putChar '\n'
             runRepl byte arr
 
 save :: MutableArray -> IO ()
