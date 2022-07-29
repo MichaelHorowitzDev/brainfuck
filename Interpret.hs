@@ -82,10 +82,6 @@ getCurrentByte (Byte b) array = do
   byteVal <- readByte (Byte b) array
   putStrLn $ "Current Byte: " ++ show byte ++ "\nByte Val: " ++ show byteVal
 
---saveFile :: Byte -> MutableArray -> IO ()
---saveFile (Byte b) array = do
-  --get
-
 loop :: Byte -> MutableArray -> [Command] -> IO (Either String ())
 loop byte array xs = do
   result <- runCode xs byte array
@@ -157,32 +153,3 @@ interpret s = case generateAst s of
         case result of
             (Left err) -> putStrLn err
             _ -> return ()
-
-wordsWhen :: (Char -> Bool) -> String -> [String]
-wordsWhen f s =
-    case dropWhile f s of
-        "" -> []
-        s' -> w : wordsWhen f s''
-            where (w, s'') = break f s'
-
--- indentString :: String -> String
--- indentString s =
---     let split = wordsWhen (== '\n') s
---     in intercalate "\n" $ map ("\t" ++) split
-
--- generateJSON :: [(Int, Int)] -> String
--- generateJSON arr =
---     let cellData = map (\(i, b) -> intercalate ",\n" [index i, byte b, value b]) arr
---         cells = intercalate ",\n" $ map (\x -> "{\n" ++ indentString x ++ "\n}") cellData
---     in cells
---     where
---         index i = "\"index\": " ++ show i
---         byte b = "\"byte\": " ++ show b
---         value b = "\"value\": " ++ "\"" ++ [chr b] ++ "\""
-
--- saveJSON :: MutableArray -> IO ()
--- saveJSON arr = do
---     associated <- getAssocs arr
---     let cellData = "[\n" ++ indentString (generateJSON associated) ++ "\n]"
---     let fileName = "brainfuck.json"
---     writeFile fileName cellData

@@ -81,6 +81,13 @@ loadFile = do
             loadFile
         Right val -> return val
 
+wordsWhen :: (Char -> Bool) -> String -> [String]
+wordsWhen f s =
+    case dropWhile f s of
+        "" -> []
+        s' -> w : wordsWhen f s''
+            where (w, s'') = break f s'
+
 loadCSV :: IO ()
 loadCSV = do
     contents <- loadFile
@@ -94,8 +101,6 @@ loadCSV = do
     arr <- newListArray (1, length dataPairs) dataPairs :: IO MutableArray
     byte <- makeByte
     runRepl byte arr
-
-
 
 replIntro :: IO ()
 replIntro = do
