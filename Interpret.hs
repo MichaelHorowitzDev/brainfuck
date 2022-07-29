@@ -44,23 +44,19 @@ readByte (Byte b) array = do
   byte <- readIORef b
   readArray array byte
 
-incByte :: Byte -> MutableArray -> IO (Either String ())
+incByte :: Byte -> MutableArray -> IO ()
 incByte (Byte b) array = do
   byte <- readIORef b
   val <- readArray array byte
-  if val == 65535 then return $ Left "Value cannot be greater than 65535"
-  else do
-      writeArray array byte (val + 1)
-      return $ Right ()
+  if val == 65535 then writeArray array byte 0
+  else writeArray array byte (val + 1)
 
-decByte :: Byte -> MutableArray -> IO (Either String ())
+decByte :: Byte -> MutableArray -> IO ()
 decByte (Byte b) array = do
   byte <- readIORef b
   val <- readArray array byte
-  if val == 0 then return $ Left "Value cannot be less than 0"
-  else do
-      writeArray array byte (val - 1)
-      return $ Right ()
+  if val == 0 then writeArray array byte 65535
+  else writeArray array byte (val - 1)
 
 output :: Byte -> MutableArray -> IO (Either String ())
 output byte array = do
@@ -102,8 +98,12 @@ runCode (x:xs) byte array = do
   result <- (case x of
     IncrementPointer -> incPointer byte
     DecrementPointer -> decPointer byte
-    Increment -> incByte byte array
-    Decrement -> decByte byte array
+    Increment -> do
+        incByte byte array
+        return $ Right ()
+    Decrement -> do
+        decByte byte array
+        return $ Right ()
     Output -> output byte array
     Input -> do
       input byte array
