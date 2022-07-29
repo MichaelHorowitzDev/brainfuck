@@ -81,12 +81,10 @@ loadFile = do
             loadFile
         Right val -> return val
 
-wordsWhen :: (Char -> Bool) -> String -> [String]
-wordsWhen f s =
-    case dropWhile f s of
-        "" -> []
-        s' -> w : wordsWhen f s''
-            where (w, s'') = break f s'
+splitWhen :: (Char -> Bool) -> String -> [String]
+splitWhen _ [] = []
+splitWhen f s = w : splitWhen f (drop 1 rest)
+    where (w, rest) = break f s
 
 loadCSV :: IO ()
 loadCSV = do
@@ -94,7 +92,7 @@ loadCSV = do
     let codeLines = lines contents
     let heading = head codeLines
     let dataLines = tail codeLines
-    let dataPairs = map (\line -> case wordsWhen (==',') line of
+    let dataPairs = map (\line -> case splitWhen (==',') line of
             [_, byte] -> read byte
             [_, byte, _] -> read byte
             _ -> 0) dataLines :: [Int]
